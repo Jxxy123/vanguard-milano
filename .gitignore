@@ -1,0 +1,13 @@
+# Environments (CRITICAL)
+.env
+.venv/
+env/
+venv/
+
+# Python Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Docker
+.dockerignore
