@@ -11,7 +11,7 @@ import time
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="VANGUARD MILANO | Command Tower",
-    page_icon="🛡️",
+    page_icon="⬡",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -52,7 +52,37 @@ _EN: dict = {
     "standing_by":    "STANDING BY — AWAITING SCAN COMMAND",
     "standing_sub":   "Select operation mode and press Execute Strike Scan",
     "footer":         "Protecting Northern Italian supply chains — Milan · Genoa · Turin",
+    "metric_strike":  "Strike Level",
+    "metric_routes":  "Affected Routes",
+    "metric_network": "Network Status",
+    "status_rerouted":"REROUTED",
+    "status_disrupted":"Disrupted",
+    "status_stable":  "STABLE",
+    "status_clear":   "Clear",
+    "trace_title":    "◆ Autonomous Execution Trace",
+    "receipt_title":  "◆ Settlement Receipt",
+    "receipt_amt":    "Amount",
+    "receipt_rec":    "Recipient",
+    "receipt_rsn":    "Reason",
+    "receipt_stat":   "Status",
+    "receipt_blk":    "Block Ref",
+    "sys_time":       "System Time",
+    "sys_region":     "Region",
+    "sys_status":     "Status: OPERATIONAL",
+    
+    # --- NEW: Status Box Translations ---
+    "scan_complete":  "✅ Scan Complete — Manifest Generated",
+    "status_init":    "Initialising VANGUARD Agent...",
+    "sys_mode_sim":   "[sys] Mode: 🎬 Simulation",
+    "sys_mode_live":  "[sys] Mode: 🌍 Live Feed",
+    "sys_engage":     "[sys] Engaging Gemini 2.5 Flash — tool loop active...",
+    "sys_payload":    "[sys] Multimodal payload:",
+    "sys_ok":         "[ok] Manifest compiled and validated.",
+    "err_backend":    "❌ Backend Error",
+    "err_conn":       "❌ Cannot reach backend. Is FastAPI running on port 8000?",
+    "err_gen":        "❌ Error:",
 }
+
 _IT: dict = {
     "tagline":        "Motore Autonomo di Logistica &amp; Pagamento X402",
     "system_armed":   "SISTEMA ARMATO",
@@ -72,6 +102,35 @@ _IT: dict = {
     "standing_by":    "IN ATTESA — COMANDO SCANSIONE RICHIESTO",
     "standing_sub":   "Seleziona la modalità e premi Esegui Scansione",
     "footer":         "Proteggere le supply chain del Nord Italia — Milano · Genova · Torino",
+    "metric_strike":  "Livello Sciopero",
+    "metric_routes":  "Rotte Coinvolte",
+    "metric_network": "Stato Rete",
+    "status_rerouted":"RIDIRETTO",
+    "status_disrupted":"Interrotto",
+    "status_stable":  "STABILE",
+    "status_clear":   "Regolare",
+    "trace_title":    "◆ Tracciamento Esecuzione Autonoma",
+    "receipt_title":  "◆ Ricevuta di Regolamento",
+    "receipt_amt":    "Importo",
+    "receipt_rec":    "Destinatario",
+    "receipt_rsn":    "Motivo",
+    "receipt_stat":   "Stato",
+    "receipt_blk":    "Rif. Blocco",
+    "sys_time":       "Ora di Sistema",
+    "sys_region":     "Regione",
+    "sys_status":     "Stato: OPERATIVO",
+    
+    # --- NEW: Status Box Translations ---
+    "scan_complete":  "✅ Scansione Completata — Manifesto Generato",
+    "status_init":    "Inizializzazione Agente VANGUARD...",
+    "sys_mode_sim":   "[sys] Modalità: 🎬 Simulazione",
+    "sys_mode_live":  "[sys] Modalità: 🌍 Feed Live",
+    "sys_engage":     "[sys] Attivazione Gemini 2.5 Flash — ciclo strumenti attivo...",
+    "sys_payload":    "[sys] Payload multimodale:",
+    "sys_ok":         "[ok] Manifesto compilato e validato.",
+    "err_backend":    "❌ Errore Backend",
+    "err_conn":       "❌ Impossibile raggiungere il backend. FastAPI è sulla porta 8000?",
+    "err_gen":        "❌ Errore:",
 }
 
 @st.cache_data(show_spinner=False)
@@ -355,8 +414,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.caption(
-    f"◆  System Time: {datetime.utcnow().strftime('%Y-%m-%d  %H:%M:%S')} UTC   |   "
-    f"Region: EU-SOUTH   |   Status: OPERATIONAL"
+    f"◆  {T['sys_time']}: {datetime.utcnow().strftime('%Y-%m-%d  %H:%M:%S')} UTC   |   "
+    f"{T['sys_region']}: EU-SOUTH   |   {T['sys_status']}"
 )
 st.markdown("---")
 
@@ -395,11 +454,18 @@ with col_cmd:
         )
     )
     if demo_mode:
-        st.warning(
-            "**SIMULATION ACTIVE** — Strike scenario is injected. "
-            "Real news feeds bypassed. Ideal for live demos.",
-            icon="🎬"
-        )
+        if _lang == "Italiano":
+            st.warning(
+                "**SIMULAZIONE ATTIVA** — Scenario di sciopero iniettato. "
+                "Feed di notizie reali ignorati. Ideale per demo dal vivo.",
+                icon="🎬"
+            )
+        else:
+            st.warning(
+                "**SIMULATION ACTIVE** — Strike scenario is injected. "
+                "Real news feeds bypassed. Ideal for live demos.",
+                icon="🎬"
+            )
     else:
         st.info(
             "**LIVE MODE** — Agent will scan ANSA + BBC Europe RSS feeds "
@@ -427,14 +493,15 @@ with col_cmd:
 
     if st.button(T["execute_btn"], use_container_width=True, type="primary"):
 
-        with st.status("Initialising VANGUARD Agent...", expanded=True) as status:
+        with st.status(T["status_init"], expanded=True) as status:
             try:
-                st.write(f"[sys] Mode: {'🎬 Simulation' if demo_mode else '🌍 Live Feed'}")
-                st.write("[sys] Engaging Gemini 2.5 Flash — tool loop active...")
+                _mode_text = T["sys_mode_sim"] if demo_mode else T["sys_mode_live"]
+                st.write(_mode_text)
+                st.write(T["sys_engage"])
                 time.sleep(0.8)
 
                 if uploaded_file:
-                    st.write(f"[sys] Multimodal payload: {uploaded_file.name} ({uploaded_file.type})")
+                    st.write(f"{T['sys_payload']} {uploaded_file.name} ({uploaded_file.type})")
 
                 # ── Build multipart request ──────────────────────────
                 files = {}
@@ -456,7 +523,7 @@ with col_cmd:
                 )
 
                 if response.status_code == 200:
-                    st.write("[ok] Manifest compiled and validated.")
+                    st.write(T["sys_ok"])
                     st.session_state["data"] = response.json()
                     # Toast fires HERE only — on successful scan, not on every rerun
                     _resp_pay = st.session_state["data"].get("manifest", {}).get("payment_settlement")
@@ -467,23 +534,31 @@ with col_cmd:
                             icon="💸",
                         )
                     status.update(
-                        label="✅ Scan Complete — Manifest Generated",
+                        label=T["scan_complete"],
                         state="complete",
                         expanded=False,
                     )
                 else:
                     status.update(
-                        label=f"❌ Backend Error {response.status_code}: {response.text[:120]}",
+                        label=f"{T['err_backend']} {response.status_code}: {response.text[:120]}",
                         state="error",
                     )
 
             except requests.exceptions.ConnectionError:
                 status.update(
-                    label="❌ Cannot reach backend. Is FastAPI running on port 8000?",
+                    label=T["err_conn"],
                     state="error",
                 )
             except Exception as exc:
-                status.update(label=f"❌ Error: {exc}", state="error")
+                status.update(label=f"{T['err_gen']} {exc}", state="error")
+                
+    # FIX: Persist the completed status box even after toggling the language!
+    elif "data" in st.session_state:
+        with st.status(T["scan_complete"], state="complete", expanded=False):
+            _mode_text = T["sys_mode_sim"] if demo_mode else T["sys_mode_live"]
+            st.write(_mode_text)
+            st.write(T["sys_engage"])
+            st.write(T["sys_ok"])
 
     # ── Mission Footer ───────────────────────────────────────────────────
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -497,15 +572,13 @@ with col_results:
 
     if "data" not in st.session_state:
         st.markdown(
-            """
+            f"""
             <div style="text-align:center; padding:5rem 2rem; color:#1E293B;">
-                <div style="font-size:4rem; margin-bottom:1.2rem; filter: drop-shadow(0 0 20px rgba(37,99,235,0.4));">🛡️</div>
-                <div style="font-family:'JetBrains Mono',monospace; font-size:0.95rem;
-                            letter-spacing:0.25em; color:#2D4A6B; font-weight:600;">
+                <div style="font-size:4rem; margin-bottom:1.2rem; color: #3B82F6; filter: drop-shadow(0 0 20px rgba(37,99,235,0.8));">⬡</div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:0.95rem; letter-spacing:0.25em; color:#2D4A6B; font-weight:600;">
                     {T['standing_by']}
                 </div>
-                <div style="font-family:'JetBrains Mono',monospace; font-size:0.72rem;
-                            letter-spacing:0.12em; color:#1E3A5F; margin-top:0.6rem;">
+                <div style="font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.12em; color:#1E3A5F; margin-top:0.6rem;">
                     {T['standing_sub']}
                 </div>
             </div>
@@ -522,13 +595,13 @@ with col_results:
         m1, m2, m3 = st.columns(3)
 
         strike_level = manifest.get("strike_level", "Unknown")
-        m1.metric("Strike Level", strike_level)
-        m2.metric("Affected Routes", len(manifest.get("affected_routes", [])))
+        m1.metric(T["metric_strike"], strike_level)
+        m2.metric(T["metric_routes"], len(manifest.get("affected_routes", [])))
 
         if manifest.get("strike_detected"):
-            m3.metric("Network Status", "REROUTED", delta="Disrupted", delta_color="inverse")
+            m3.metric(T["metric_network"], T["status_rerouted"], delta=T["status_disrupted"], delta_color="inverse")
         else:
-            m3.metric("Network Status", "STABLE", delta="Clear", delta_color="normal")
+            m3.metric(T["metric_network"], T["status_stable"], delta=T["status_clear"], delta_color="normal")
 
         # ── Agent Decision Log ────────────────────────────────────────
         if agent_steps:
@@ -556,7 +629,7 @@ with col_results:
 
             st.markdown(
                 f'<div class="agent-log-wrap">'
-                f'  <div class="agent-log-title">◆ Autonomous Execution Trace</div>'
+                f'  <div class="agent-log-title">{T["trace_title"]}</div>'
                 f'  <div class="agent-log-body">{rows_html}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -699,26 +772,26 @@ with col_results:
             st.markdown(
                 f"""
                 <div class="receipt-wrap">
-                    <div class="receipt-header">◆ Settlement Receipt — {payment.get("transaction_id","")}</div>
+                    <div class="receipt-header">{T["receipt_title"]} — {payment.get("transaction_id","")}</div>
                     <div class="receipt-body">
                         <div style="display:flex;justify-content:space-between;">
-                            <span>Amount</span>
+                            <span>{T["receipt_amt"]}</span>
                             <span class="receipt-green">{payment.get("amount",0):,.2f} {payment.get("currency","USDC")}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;">
-                            <span>Recipient</span>
+                            <span>{T["receipt_rec"]}</span>
                             <span class="receipt-val">{payment.get("recipient","")}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;">
-                            <span>Reason</span>
+                            <span>{T["receipt_rsn"]}</span>
                             <span class="receipt-val">{payment.get("reason","")}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;">
-                            <span>Status</span>
+                            <span>{T["receipt_stat"]}</span>
                             <span class="receipt-green">{payment.get("status","")}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;">
-                            <span>Block Ref</span>
+                            <span>{T["receipt_blk"]}</span>
                             <span class="receipt-val" style="font-size:0.7rem;">{block_ref}</span>
                         </div>
                     </div>
