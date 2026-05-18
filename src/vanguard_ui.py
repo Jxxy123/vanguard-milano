@@ -22,6 +22,81 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 url_demo = st.query_params.get("demo", "") == "true"
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  HYBRID LOCALIZATION ENGINE
+#  Strategy: Demo+Italiano → hardcoded IT dict (reliable, no internet needed)
+#            Live+Italiano  → GoogleTranslator real-time (shows live capability)
+#            English        → EN dict (default)
+# ─────────────────────────────────────────────────────────────────────────────
+try:
+    from deep_translator import GoogleTranslator as _GT
+    _translator_available = True
+except ImportError:
+    _translator_available = False
+
+_EN: dict = {
+    "tagline":        "Autonomous Logistics &amp; X402 Settlement Engine",
+    "system_armed":   "SYSTEM ARMED",
+    "env_prod":       "ENV: PRODUCTION",
+    "region":         "REGION: EU-SOUTH",
+    "operational":    "◆ OPERATIONAL",
+    "op_mode":        "⚙️ Operation Mode",
+    "demo_toggle":    "🎬  Demo Mode (Simulated Strike)",
+    "manifest_lbl":   "📄 Cargo Manifest (Optional)",
+    "agent_cmd":      "🚀 Agent Command",
+    "execute_btn":    "Execute Strike Scan",
+    "threat_lbl":     "📡 Threat Assessment",
+    "log_lbl":        "🤖 Agent Decision Log",
+    "map_lbl":        "🗺️ Dynamic Logistics Network",
+    "plan_lbl":       "📋 Rerouting Plan",
+    "pay_lbl":        "💸 X402 Autonomous Settlement",
+    "standing_by":    "STANDING BY — AWAITING SCAN COMMAND",
+    "standing_sub":   "Select operation mode and press Execute Strike Scan",
+    "footer":         "Protecting Northern Italian supply chains — Milan · Genoa · Turin",
+}
+_IT: dict = {
+    "tagline":        "Motore Autonomo di Logistica &amp; Pagamento X402",
+    "system_armed":   "SISTEMA ARMATO",
+    "env_prod":       "AMB: PRODUZIONE",
+    "region":         "REGIONE: EU-SUD",
+    "operational":    "◆ OPERATIVO",
+    "op_mode":        "⚙️ Modalità Operativa",
+    "demo_toggle":    "🎬  Modalità Demo (Sciopero Simulato)",
+    "manifest_lbl":   "📄 Manifesto Cargo (Facoltativo)",
+    "agent_cmd":      "🚀 Comando Agente",
+    "execute_btn":    "Esegui Scansione Sciopero",
+    "threat_lbl":     "📡 Valutazione Minaccia",
+    "log_lbl":        "🤖 Log Decisionale Agente",
+    "map_lbl":        "🗺️ Rete Logistica Dinamica",
+    "plan_lbl":       "📋 Piano di Rerouting",
+    "pay_lbl":        "💸 Accordo Autonomo X402",
+    "standing_by":    "IN ATTESA — COMANDO SCANSIONE RICHIESTO",
+    "standing_sub":   "Seleziona la modalità e premi Esegui Scansione",
+    "footer":         "Proteggere le supply chain del Nord Italia — Milano · Genova · Torino",
+}
+
+@st.cache_data(show_spinner=False)
+def _live_translate() -> dict:
+    """Translates EN dict via GoogleTranslator; falls back to hardcoded IT on error."""
+    if not _translator_available:
+        return _IT
+    try:
+        tr = _GT(source="en", target="it")
+        return {k: tr.translate(v) for k, v in _EN.items()}
+    except Exception:
+        return _IT
+
+# Read persisted widget states from the PREVIOUS Streamlit run
+_lang = st.session_state.get("lang_sel", "English")
+_demo_persisted = st.session_state.get("demo_mode_key", url_demo)
+
+if _lang == "Italiano":
+    # Demo + Italian = use reliable hardcoded dict (no network calls during recording)
+    # Live + Italian = use real-time GoogleTranslator (demonstrates live capability)
+    T: dict = _IT if _demo_persisted else _live_translate()
+else:
+    T = _EN
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  CSS  — complete professional dark theme
 #  FIX: background URL no longer has Markdown square brackets breaking CSS
 #  Container shipping image (Unsplash) fits the logistics theme perfectly
@@ -266,15 +341,15 @@ label                { color:#94A3B8 !important; }
 # ─────────────────────────────────────────────────────────────────────────────
 #  HERO SECTION
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(f"""
 <div class="vg-hero">
     <h1 class="vg-wordmark">VANGUARD <span>MILANO</span></h1>
-    <p class="vg-tagline">Autonomous Logistics &amp; X402 Settlement Engine</p>
+    <p class="vg-tagline">{T['tagline']}</p>
     <div class="vg-status-bar">
-        <span><span class="live-dot"></span>SYSTEM ARMED</span>
-        <span>ENV: PRODUCTION</span>
-        <span>REGION: EU-SOUTH</span>
-        <span>◆ OPERATIONAL</span>
+        <span><span class="live-dot"></span>{T['system_armed']}</span>
+        <span>{T['env_prod']}</span>
+        <span>{T['region']}</span>
+        <span>{T['operational']}</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -297,11 +372,22 @@ col_cmd, col_results = st.columns([1, 2.3], gap="large")
 # ════════════════════════════════════════════════════════════════════════════
 with col_cmd:
 
+    # ── Language Toggle ──────────────────────────────────────────────────
+    st.markdown('<p class="vg-label">🌐 Language</p>', unsafe_allow_html=True)
+    st.radio(
+        "Language", ["English", "Italiano"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="lang_sel",          # persisted in session_state → T recomputes on rerun
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
+
     # ── Operation Mode ───────────────────────────────────────────────────
-    st.markdown('<p class="vg-label">⚙️ Operation Mode</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="vg-label">{T["op_mode"]}</p>', unsafe_allow_html=True)
     demo_mode = st.toggle(
-        "🎬  Demo Mode (Simulated Strike)",
+        T["demo_toggle"],
         value=url_demo,
+        key="demo_mode_key",     # persisted in session_state → used by T logic at top
         help=(
             "Enable when presenting to judges or when no live strikes are active in Italy. "
             "Injects a realistic 48-hr national rail & road-freight strike scenario. "
@@ -324,7 +410,7 @@ with col_cmd:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ── Multimodal Upload ────────────────────────────────────────────────
-    st.markdown('<p class="vg-label">📄 Cargo Manifest (Optional)</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="vg-label">{T["manifest_lbl"]}</p>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
         label="Upload shipping manifest for AI Vision analysis",
         type=["pdf", "png", "jpg", "jpeg"],
@@ -337,9 +423,9 @@ with col_cmd:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ── Execute Button ───────────────────────────────────────────────────
-    st.markdown('<p class="vg-label">🚀 Agent Command</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="vg-label">{T["agent_cmd"]}</p>', unsafe_allow_html=True)
 
-    if st.button("Execute Strike Scan", use_container_width=True, type="primary"):
+    if st.button(T["execute_btn"], use_container_width=True, type="primary"):
 
         with st.status("Initialising VANGUARD Agent...", expanded=True) as status:
             try:
@@ -372,6 +458,14 @@ with col_cmd:
                 if response.status_code == 200:
                     st.write("[ok] Manifest compiled and validated.")
                     st.session_state["data"] = response.json()
+                    # Toast fires HERE only — on successful scan, not on every rerun
+                    _resp_pay = st.session_state["data"].get("manifest", {}).get("payment_settlement")
+                    if _resp_pay and isinstance(_resp_pay, dict):
+                        st.toast(
+                            f"✅ X402 settled: {_resp_pay.get('amount',0):,.2f} "
+                            f"{_resp_pay.get('currency','USDC')} → {_resp_pay.get('recipient','')}",
+                            icon="💸",
+                        )
                     status.update(
                         label="✅ Scan Complete — Manifest Generated",
                         state="complete",
@@ -393,7 +487,7 @@ with col_cmd:
 
     # ── Mission Footer ───────────────────────────────────────────────────
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.caption("Protecting Northern Italian supply chains — Milan · Genoa · Turin")
+    st.caption(T["footer"])
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -408,11 +502,11 @@ with col_results:
                 <div style="font-size:4rem; margin-bottom:1.2rem; filter: drop-shadow(0 0 20px rgba(37,99,235,0.4));">🛡️</div>
                 <div style="font-family:'JetBrains Mono',monospace; font-size:0.95rem;
                             letter-spacing:0.25em; color:#2D4A6B; font-weight:600;">
-                    STANDING BY — AWAITING SCAN COMMAND
+                    {T['standing_by']}
                 </div>
                 <div style="font-family:'JetBrains Mono',monospace; font-size:0.72rem;
                             letter-spacing:0.12em; color:#1E3A5F; margin-top:0.6rem;">
-                    Select operation mode and press Execute Strike Scan
+                    {T['standing_sub']}
                 </div>
             </div>
             """,
@@ -424,7 +518,7 @@ with col_results:
         agent_steps = resp_data.get("agent_steps", [])
 
         # ── Threat Metrics ────────────────────────────────────────────
-        st.markdown('<p class="vg-label">📡 Threat Assessment</p>', unsafe_allow_html=True)
+        st.markdown(f'<p class="vg-label">{T["threat_lbl"]}</p>', unsafe_allow_html=True)
         m1, m2, m3 = st.columns(3)
 
         strike_level = manifest.get("strike_level", "Unknown")
@@ -439,7 +533,7 @@ with col_results:
         # ── Agent Decision Log ────────────────────────────────────────
         if agent_steps:
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown('<p class="vg-label">🤖 Agent Decision Log</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="vg-label">{T["log_lbl"]}</p>', unsafe_allow_html=True)
 
             color_map = {
                 "ok":      "log-ok",
@@ -470,7 +564,23 @@ with col_results:
 
         # ── Dynamic Logistics Map ─────────────────────────────────────
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<p class="vg-label">🗺️ Dynamic Logistics Network</p>', unsafe_allow_html=True)
+        st.markdown(f'<p class="vg-label">{T["map_lbl"]}</p>', unsafe_allow_html=True)
+
+        # Map Style Toggle
+        _map_choice = st.radio(
+            "Map View", ["🌑 Dark Mode", "🗺️ Street View"],
+            horizontal=True, label_visibility="collapsed",
+        )
+        if _map_choice == "🌑 Dark Mode":
+            _mapbox_style = "carto-darkmatter"
+            _legend_color = "#94A3B8"
+            _legend_bg    = "rgba(3,7,18,0.85)"
+            _hover_bg     = "#0d1b2a"
+        else:
+            _mapbox_style = "open-street-map"
+            _legend_color = "#1E293B"
+            _legend_bg    = "rgba(255,255,255,0.9)"
+            _hover_bg     = "#ffffff"
 
         city_coords = {
             "Milan":    (45.4642,  9.1900),
@@ -542,13 +652,13 @@ with col_results:
         )
         fig.update_traces(marker=dict(size=14))
         fig.update_layout(
-            mapbox_style="carto-darkmatter",
+            mapbox_style=_mapbox_style,
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             legend=dict(
-                font=dict(size=13, color="#94A3B8", family="JetBrains Mono"),
-                bgcolor="rgba(3,7,18,0.85)",
+                font=dict(size=13, color=_legend_color, family="JetBrains Mono"),
+                bgcolor=_legend_bg,
                 bordercolor="rgba(37,99,235,0.2)",
                 borderwidth=1,
                 x=0.01, y=0.99,
@@ -556,7 +666,7 @@ with col_results:
             hoverlabel=dict(
                 font_size=13,
                 font_family="JetBrains Mono",
-                bgcolor="#0d1b2a",
+                bgcolor=_hover_bg,
             ),
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -564,7 +674,7 @@ with col_results:
         # ── Rerouting Plan ────────────────────────────────────────────
         rerouting_plan = manifest.get("rerouting_plan", "")
         if rerouting_plan and rerouting_plan not in ("", "All routes clear."):
-            st.markdown('<p class="vg-label">📋 Rerouting Plan</p>', unsafe_allow_html=True)
+            st.markdown(f'<p class="vg-label">{T["plan_lbl"]}</p>', unsafe_allow_html=True)
             st.info(rerouting_plan, icon="🗺️")
 
         # ── X402 Settlement Receipt ───────────────────────────────────
@@ -581,7 +691,7 @@ with col_results:
                 'font-family:JetBrains Mono,monospace;letter-spacing:0.08em;">ON-CHAIN</span>'
             )
             st.markdown(
-                f'<p class="vg-label">💸 X402 Autonomous Settlement &nbsp; {badge_html}</p>',
+                f'<p class="vg-label">{T["pay_lbl"]} &nbsp; {badge_html}</p>',
                 unsafe_allow_html=True,
             )
 
@@ -615,8 +725,4 @@ with col_results:
                 </div>
                 """,
                 unsafe_allow_html=True,
-            )
-            st.toast(
-                f"✅ X402 settled: {payment.get('amount',0):,.2f} {payment.get('currency','USDC')} → {payment.get('recipient','')}",
-                icon="💸",
             )

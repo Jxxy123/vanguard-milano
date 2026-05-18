@@ -31,30 +31,76 @@ No human in the loop. No procurement delays. No missed backup slots.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
+```mermaid
+flowchart TB
+    subgraph BROWSER["🖥️  User Browser"]
+        UI_HERO["Hero Section\n+ Language Toggle EN ↔ IT"]
+        UI_CMD["Command Panel\n• Demo / Live Mode toggle\n• Cargo Manifest upload\n• Execute Strike Scan button"]
+        UI_RESULTS["Results Panel\n• Threat metrics\n• Agent Decision Log\n• Logistics Map (Dark / Street)\n• X402 Settlement Receipt"]
+    end
+
+    subgraph DOCKER["☁️  Vultr Ubuntu VM — Docker Container"]
+
+        subgraph FRONTEND["🎨  Streamlit  (Port 8501)"]
+            ST["vanguard_ui.py\nHybrid Localization Engine\nMap Style Toggle\nMultipart file handling"]
+        end
+
+        subgraph BACKEND["⚡  FastAPI  (Port 8000)"]
+            API["POST /status\nGET  /health\nFile upload handler"]
+        end
+
+        subgraph AGENT["🤖  Vanguard Agent  (Gemini 2.5 Flash)"]
+            STATE["VanguardState\nStep logger / trace"]
+            LOOP["enable_automatic_function_calling\nAgentic tool-call loop"]
+            T1["Tool 1 — search_live_news()\nANSA RSS · BBC Europe RSS\nItalian keyword filter"]
+            T2["Tool 2 — check_hub_capacity()\nTurin · Bologna · Piacenza\nVerona · Brescia"]
+            T3["Tool 3 — execute_x402_settlement()\nDeterministic SHA-256 TX-ID\nUSDC programmable payment"]
+        end
+    end
+
+    subgraph EXTERNAL["🌐  External APIs"]
+        GEMINI["Google Gemini 2.5 Flash\nGemini API  (AI Studio)"]
+        ANSA["ANSA RSS Feeds\nItalian national news"]
+        BBC["BBC Europe RSS\nEnglish-language news"]
+        GT["GoogleTranslator API\nEN → IT live translation"]
+    end
+
+    BROWSER -->|"HTTP Multipart POST\n(demo_mode + optional file)"| ST
+    ST -->|"Forwards to backend"| API
+    API -->|"Calls analyze_strikes()"| AGENT
+    STATE --> LOOP
+    LOOP -->|"Tool call 1"| T1
+    LOOP -->|"Tool call 2"| T2
+    LOOP -->|"Tool call 3 — IF Critical"| T3
+    T1 -->|"Live headlines"| ANSA
+    T1 -->|"EU transport news"| BBC
+    LOOP <-->|"Reasoning engine"| GEMINI
+    API -->|"StatusResponse + AgentSteps"| ST
+    ST -->|"Renders results"| UI_RESULTS
+    ST -->|"Language toggle"| GT
 ```
-┌─────────────────────────────────────────────────────────┐
-│           VANGUARD MILANO  v2.0                         │
-│                                                         │
-│  Streamlit UI (Port 8501)                               │
-│       ↕ HTTP Multipart                                  │
-│  FastAPI Backend (Port 8000)                            │
-│       ↕ Gemini SDK                                      │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  Gemini 2.5 Flash — Autonomous Reasoning Engine  │   │
-│  │                                                  │   │
-│  │  Tool 1: search_live_news()                      │   │
-│  │    └─ ANSA + BBC RSS feeds, keyword filtering    │   │
-│  │  Tool 2: check_hub_capacity()                    │   │
-│  │    └─ Turin · Bologna · Piacenza · Verona        │   │
-│  │  Tool 3: execute_x402_settlement()               │   │
-│  │    └─ Programmable USDC payment (simulation)     │   │
-│  └──────────────────────────────────────────────────┘   │
-│                                                         │
-│  Deployed: Vultr Ubuntu VM + Docker                     │
-└─────────────────────────────────────────────────────────┘
-```
+
+### How it works — step by step
+
+When a user clicks **Execute Strike Scan**, the Streamlit frontend (`vanguard_ui.py`) sends an HTTP multipart POST request to the FastAPI backend on port 8000, optionally attaching a shipping manifest (PDF or image) for multimodal analysis.
+
+FastAPI calls `agent.analyze_strikes()`, which initialises `VanguardState` — a step logger that records every tool call and its result in real time, building the **Agent Decision Log** visible in the UI.
+
+The agent hands control to **Gemini 2.5 Flash** with `enable_automatic_function_calling=True`, meaning Gemini autonomously decides which tools to call and in what order, without any hard-coded `if/else` routing:
+
+1. **`search_live_news(query)`** — polls ANSA (Italian national news) and BBC Europe RSS feeds, filters headlines by Italian and English transport keywords (`sciopero`, `trenitalia`, `autotrasporto`, `strike`, `freight`, etc.), and returns a plain-text intelligence summary to Gemini.
+
+2. **`check_hub_capacity(hub_name)`** — queries a structured freight-exchange registry for Turin, Bologna, Piacenza, Verona and Brescia, returning TEU capacity and availability status. (Production version connects to TimoCom / Teleroute APIs.)
+
+3. **`execute_x402_settlement(amount, recipient, reason)`** — autonomously generates a deterministic transaction ID (SHA-256) and block reference (MD5), and "settles" a USDC payment to reserve emergency freight capacity. (Production version integrates with the Coinbase CDP Wallet API for real on-chain execution.)
+
+Once Gemini has finished calling all relevant tools, it synthesises the results into a structured `RerouteManifest` JSON object, which FastAPI validates with Pydantic and returns to the frontend together with the full `agent_steps` trace.
+
+The Streamlit UI renders the threat assessment metrics, the agent log, an interactive Plotly Mapbox map (switchable between Dark Mode and Street View), the rerouting plan, and the X402 settlement receipt — all in the user's chosen language (English or Italian via the Hybrid Localization Engine).
+
+
 
 ---
 
@@ -233,4 +279,3 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 *Built for the AI Agent Olympics Hackathon — Milan AI Week 2026*
-*Fiera Milano, Rho — May 19-20, 2026*
