@@ -34,56 +34,58 @@ No human in the loop. No procurement delays. No missed backup slots.
 ## 🏗️ System Architecture
 
 ```mermaid
-flowchart TB
-    %% Minimalist Dark Mode Enterprise Theme
-    classDef default fill:#1E1E24,stroke:#444B5B,stroke-width:2px,color:#D1D5DB,font-size:15px,font-family:sans-serif;
-    classDef accent fill:#111827,stroke:#3B82F6,stroke-width:2px,color:#E0E7FF,font-weight:bold;
+flowchart TD
+    %% Colorful Professional Theme with MASSIVE Text
+    classDef default fill:#222,stroke:#555,stroke-width:2px,color:#fff,font-size:18px,font-family:sans-serif;
+    classDef browser fill:#1e1e2f,stroke:#00d2ff,stroke-width:3px,color:#fff,font-weight:bold,font-size:18px;
+    classDef streamlit fill:#0052cc,stroke:#00bfff,stroke-width:3px,color:#fff,font-size:18px,font-weight:bold;
+    classDef fastapi fill:#00875a,stroke:#36b37e,stroke-width:3px,color:#fff,font-size:18px,font-weight:bold;
+    classDef agent fill:#ff991f,stroke:#ff5630,stroke-width:4px,color:#000,font-weight:bold,font-size:20px;
+    classDef tools fill:#ffc400,stroke:#ff991f,stroke-width:3px,color:#000,font-size:16px,font-weight:bold;
+    classDef external fill:#5243aa,stroke:#8777d9,stroke-width:3px,color:#fff,font-size:18px,font-weight:bold;
 
-    subgraph BROWSER["🖥️  User Browser"]
-        UI_HERO["Hero Section\nLanguage Toggle"]:::accent
-        UI_CMD["Command Panel\nManifest Upload & Strike Scan"]:::accent
-        UI_RESULTS["Results Panel\nAgent Log & X402 Settlement"]:::accent
+    subgraph BROWSER["🖥️  USER BROWSER"]
+        direction LR
+        UI_HERO["Hero Section & Language"]:::browser
+        UI_CMD["Command Panel & Uploads"]:::browser
+        UI_RESULTS["Results & X402 Settlement"]:::browser
     end
 
-    subgraph DOCKER["☁️  Vultr Ubuntu VM — Docker Container"]
-        subgraph FRONTEND["🎨  Streamlit  (Port 8501)"]
-            ST["vanguard_ui.py\nHybrid Map Localization"]:::accent
-        end
+    subgraph DOCKER["☁️  VULTR UBUNTU VM — DOCKER CONTAINER"]
+        direction TB
+        ST["🎨 Streamlit (Port 8501)\nvanguard_ui.py Map Logic"]:::streamlit
+        
+        API["⚡ FastAPI (Port 8000)\nBackend File Handler"]:::fastapi
 
-        subgraph BACKEND["⚡  FastAPI  (Port 8000)"]
-            API["POST /status\nFile upload handler"]:::accent
-        end
-
-        subgraph AGENT["🤖  Vanguard Agent  (Gemini 2.5 Flash)"]
-            STATE["VanguardState\nStep logger & trace"]:::accent
-            LOOP["enable_automatic_function_calling\nAgentic loop"]:::accent
-            T1["Tool 1: search_live_news()\nANSA & BBC Feeds"]:::default
-            T2["Tool 2: check_hub_capacity()\nNorthern Italy Hubs"]:::default
-            T3["Tool 3: execute_x402_settlement()\nUSDC smart contract"]:::default
+        subgraph AGENT["🤖  VANGUARD AGENT CORE (Gemini 2.5 Flash)"]
+            direction TB
+            STATE["VanguardState\nLogger & Trace"]:::agent
+            LOOP["Agentic Tool-Call Loop"]:::agent
+            T1["Tool 1: Live News Feeds"]:::tools
+            T2["Tool 2: Hub Capacity Check"]:::tools
+            T3["Tool 3: X402 USDC Settlement"]:::tools
         end
     end
 
-    subgraph EXTERNAL["🌐  External APIs"]
-        GEMINI["Google Gemini 2.5 Flash\n(AI Studio)"]:::default
-        ANSA["ANSA RSS\nItalian News"]:::default
-        BBC["BBC Europe RSS\nEnglish News"]:::default
-        GT["GoogleTranslator API\nLive translation"]:::default
+    subgraph EXTERNAL["🌐  EXTERNAL APIs"]
+        direction LR
+        GEMINI["Google Gemini 2.5\n(AI Studio)"]:::external
+        NEWS["ANSA & BBC\nRSS Feeds"]:::external
+        GT["Google Translator API"]:::external
     end
 
     %% Connections
-    BROWSER -->|"HTTP POST"| ST
-    ST -->|"Forwards to backend"| API
+    UI_CMD -->|"HTTP POST"| ST
+    ST -->|"Status Updates"| UI_RESULTS
+    ST -->|"API Request"| API
+    ST -.->|"Live Translation"| GT
+    
     API -->|"Calls analyze_strikes()"| STATE
     STATE --> LOOP
-    LOOP -->|"Tool call 1"| T1
-    LOOP -->|"Tool call 2"| T2
-    LOOP -->|"Tool call 3 (Critical)"| T3
-    T1 -->|"Live headlines"| ANSA
-    T1 -->|"EU transport news"| BBC
-    LOOP <-->|"Reasoning engine"| GEMINI
-    API -->|"Status + AgentSteps"| ST
-    ST -->|"Renders results"| UI_RESULTS
-    ST -->|"Language toggle"| GT
+    
+    LOOP --> T1 & T2 & T3
+    T1 -.->|"Fetch Data"| NEWS
+    LOOP <==>|"Reasoning Engine"| GEMINI
 ```
 
 ### How it works — step by step
