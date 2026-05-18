@@ -18,7 +18,7 @@ st.set_page_config(
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
-# URL param still works as a convenience shortcut (?demo=true)
+
 url_demo = st.query_params.get("demo", "") == "true"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -40,13 +40,13 @@ _EN: dict = {
     "region":         "REGION: EU-SOUTH",
     "operational":    "◆ OPERATIONAL",
     "op_mode":        "⚙️ Operation Mode",
-    "demo_toggle":    "🎬  Demo Mode (Simulated Strike)",
+    "demo_toggle":    "   Demo Mode (Simulated Strike)",
     "manifest_lbl":   "📄 Cargo Manifest (Optional)",
     "agent_cmd":      "🚀 Agent Command",
     "execute_btn":    "Execute Strike Scan",
     "threat_lbl":     "📡 Threat Assessment",
     "log_lbl":        "🤖 Agent Decision Log",
-    "map_lbl":        "🗺️ Dynamic Logistics Network",
+    "map_lbl":        " Dynamic Logistics Network",
     "plan_lbl":       "📋 Rerouting Plan",
     "pay_lbl":        "💸 X402 Autonomous Settlement",
     "standing_by":    "STANDING BY — AWAITING SCAN COMMAND",
@@ -70,10 +70,10 @@ _EN: dict = {
     "sys_region":     "Region",
     "sys_status":     "Status: OPERATIONAL",
     
-    # --- NEW: Status Box Translations ---
+    # --- Status Box Translations ---
     "scan_complete":  "✅ Scan Complete — Manifest Generated",
     "status_init":    "Initialising VANGUARD Agent...",
-    "sys_mode_sim":   "[sys] Mode: 🎬 Simulation",
+    "sys_mode_sim":   "[sys] Mode:  Simulation",
     "sys_mode_live":  "[sys] Mode: 🌍 Live Feed",
     "sys_engage":     "[sys] Engaging Gemini 2.5 Flash — tool loop active...",
     "sys_payload":    "[sys] Multimodal payload:",
@@ -90,13 +90,13 @@ _IT: dict = {
     "region":         "REGIONE: EU-SUD",
     "operational":    "◆ OPERATIVO",
     "op_mode":        "⚙️ Modalità Operativa",
-    "demo_toggle":    "🎬  Modalità Demo (Sciopero Simulato)",
+    "demo_toggle":    "  Modalità Demo (Sciopero Simulato)",
     "manifest_lbl":   "📄 Manifesto Cargo (Facoltativo)",
     "agent_cmd":      "🚀 Comando Agente",
     "execute_btn":    "Esegui Scansione Sciopero",
     "threat_lbl":     "📡 Valutazione Minaccia",
     "log_lbl":        "🤖 Log Decisionale Agente",
-    "map_lbl":        "🗺️ Rete Logistica Dinamica",
+    "map_lbl":        " Rete Logistica Dinamica",
     "plan_lbl":       "📋 Piano di Rerouting",
     "pay_lbl":        "💸 Accordo Autonomo X402",
     "standing_by":    "IN ATTESA — COMANDO SCANSIONE RICHIESTO",
@@ -120,10 +120,10 @@ _IT: dict = {
     "sys_region":     "Regione",
     "sys_status":     "Stato: OPERATIVO",
     
-    # --- NEW: Status Box Translations ---
+    # --- Status Box Translations ---
     "scan_complete":  "✅ Scansione Completata — Manifesto Generato",
     "status_init":    "Inizializzazione Agente VANGUARD...",
-    "sys_mode_sim":   "[sys] Modalità: 🎬 Simulazione",
+    "sys_mode_sim":   "[sys] Modalità:  Simulazione",
     "sys_mode_live":  "[sys] Modalità: 🌍 Feed Live",
     "sys_engage":     "[sys] Attivazione Gemini 2.5 Flash — ciclo strumenti attivo...",
     "sys_payload":    "[sys] Payload multimodale:",
@@ -149,17 +149,13 @@ _lang = st.session_state.get("lang_sel", "English")
 _demo_persisted = st.session_state.get("demo_mode_key", url_demo)
 
 if _lang == "Italiano":
-    # Demo + Italian = use reliable hardcoded dict (no network calls during recording)
+    # Demo + Italian = use reliable hardcoded dict
     # Live + Italian = use real-time GoogleTranslator (demonstrates live capability)
     T: dict = _IT if _demo_persisted else _live_translate()
 else:
     T = _EN
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  CSS  — complete professional dark theme
-#  FIX: background URL no longer has Markdown square brackets breaking CSS
-#  Container shipping image (Unsplash) fits the logistics theme perfectly
-# ─────────────────────────────────────────────────────────────────────────────
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -519,13 +515,13 @@ with col_cmd:
                     f"{BACKEND_URL}/status",
                     data=data,
                     files=files if files else None,
-                    timeout=120,   # agent tool loop can take up to ~90 s in live mode
+                    timeout=120,
                 )
 
                 if response.status_code == 200:
                     st.write(T["sys_ok"])
                     st.session_state["data"] = response.json()
-                    # Toast fires HERE only — on successful scan, not on every rerun
+
                     _resp_pay = st.session_state["data"].get("manifest", {}).get("payment_settlement")
                     if _resp_pay and isinstance(_resp_pay, dict):
                         st.toast(
@@ -551,8 +547,7 @@ with col_cmd:
                 )
             except Exception as exc:
                 status.update(label=f"{T['err_gen']} {exc}", state="error")
-                
-    # FIX: Persist the completed status box even after toggling the language!
+
     elif "data" in st.session_state:
         with st.status(T["scan_complete"], state="complete", expanded=False):
             _mode_text = T["sys_mode_sim"] if demo_mode else T["sys_mode_live"]
@@ -641,10 +636,10 @@ with col_results:
 
         # Map Style Toggle
         _map_choice = st.radio(
-            "Map View", ["🌑 Dark Mode", "🗺️ Street View"],
+            "Map View", [" Dark Mode", " Street View"],
             horizontal=True, label_visibility="collapsed",
         )
-        if _map_choice == "🌑 Dark Mode":
+        if _map_choice == " Dark Mode":
             _mapbox_style = "carto-darkmatter"
             _legend_color = "#94A3B8"
             _legend_bg    = "rgba(3,7,18,0.85)"

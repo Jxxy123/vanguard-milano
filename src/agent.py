@@ -65,11 +65,11 @@ def search_live_news(query: str) -> str:
     port disruptions, or rail delays affecting Northern Italy.
     Returns a plain-text summary of relevant headlines.
     """
-    VanguardState.log("🔍 Scanning Live News Feeds", f"Query: '{query}'", "running")
+    VanguardState.log(" Scanning Live News Feeds", f"Query: '{query}'", "running")
 
     # ── DEMO PATH ──────────────────────────────────────────────────────────
     if VanguardState.is_demo:
-        VanguardState.log("🎬 Demo Scenario Loaded", "Injected 48-hr national rail & road strike", "ok")
+        VanguardState.log(" Demo Scenario Loaded", "Injected 48-hr national rail & road strike", "ok")
         return (
             "BREAKING — DEMO SCENARIO: Italian transport unions (CGIL/CISL/UIL) have declared "
             "a 48-hour national rail and road-freight strike effective May 17-18, 2026, severely "
@@ -79,7 +79,7 @@ def search_live_news(query: str) -> str:
         )
 
     # ── LIVE PATH ──────────────────────────────────────────────────────────
-    VanguardState.log("🌐 Polling RSS Feeds", "ANSA Economy · ANSA News · BBC Europe", "running")
+    VanguardState.log(" Polling RSS Feeds", "ANSA Economy · ANSA News · BBC Europe", "running")
     collected = []
 
     for feed_url in _NEWS_FEEDS:
@@ -111,7 +111,7 @@ def check_hub_capacity(hub_name: str) -> str:
     Checks real-time freight slot availability at alternative Northern Italian logistics hubs.
     In production this connects to TimoCom / Teleroute freight-exchange APIs.
     """
-    VanguardState.log("📦 Checking Hub Capacity", f"Hub: {hub_name}", "running")
+    VanguardState.log(" Checking Hub Capacity", f"Hub: {hub_name}", "running")
 
     capacities = {
         "Turin":    "Available — 450 TEU capacity, 24-hr operations, fast customs lane",
@@ -135,7 +135,7 @@ def execute_x402_settlement(amount: float, recipient: str, reason: str) -> dict:
     emergency logistics capacity at an alternative hub.
     (Simulation layer — production integrates with Coinbase CDP Wallet API.)
     """
-    VanguardState.log("💸 Initiating X402 Settlement", f"{amount:,.2f} USDC → {recipient}", "running")
+    VanguardState.log(" Initiating X402 Settlement", f"{amount:,.2f} USDC → {recipient}", "running")
 
     # Deterministic, reproducible IDs using hashlib (no Python hash() randomisation)
     payload_str = f"{recipient}|{amount}|{reason}"
@@ -186,7 +186,7 @@ class VanguardAgent:
         VanguardState.reset()
         VanguardState.is_demo = demo_mode
         VanguardState.log(
-            "🚀 Agent Initialized",
+            " Agent Initialized",
             f"VANGUARD v2.0 online — {'🎬 Demo' if demo_mode else '🌍 Live'} Mode",
             "ok"
         )
@@ -196,7 +196,7 @@ class VanguardAgent:
 
         if document_bytes and mime_type:
             VanguardState.log(
-                "📄 Cargo Manifest Uploaded",
+                " Cargo Manifest Uploaded",
                 f"Analysing via Gemini Vision ({mime_type})",
                 "running"
             )
@@ -232,7 +232,7 @@ class VanguardAgent:
 
         try:
             VanguardState.log(
-                "🧠 Agentic Loop Started",
+                " Agentic Loop Started",
                 "Gemini 2.5 Flash — automatic tool-call execution enabled",
                 "running"
             )
@@ -251,7 +251,7 @@ class VanguardAgent:
                     if _is_quota and _attempt < _MAX_RETRIES - 1:
                         _wait = 20 * (2 ** _attempt)   # 20 s → 40 s → 80 s
                         VanguardState.log(
-                            "⏳ API Rate Limit — Retrying",
+                            " API Rate Limit — Retrying",
                             f"Quota exceeded. Waiting {_wait}s (attempt {_attempt + 1}/{_MAX_RETRIES - 1})",
                             "warning"
                         )
@@ -259,7 +259,7 @@ class VanguardAgent:
                     else:
                         raise   # non-quota error or out of retries — propagate
 
-            VanguardState.log("📊 Compiling Reroute Manifest", "Parsing structured agent output", "running")
+            VanguardState.log(" Compiling Reroute Manifest", "Parsing structured agent output", "running")
 
             text  = response.text.strip()
             start = text.find("{")
@@ -272,7 +272,7 @@ class VanguardAgent:
 
             if manifest.strike_detected:
                 VanguardState.log(
-                    "🎯 Mission Complete",
+                    " Mission Complete",
                     f"Threat Level: {manifest.strike_level} — Supply chain secured",
                     "ok"
                 )
@@ -282,7 +282,7 @@ class VanguardAgent:
             return manifest
 
         except Exception as exc:
-            VanguardState.log("🔥 Agent Error", str(exc), "error")
+            VanguardState.log(" Agent Error", str(exc), "error")
             try:
                 print(f"[VANGUARD][DEBUG] Raw model output: {response.text}")
             except Exception:
