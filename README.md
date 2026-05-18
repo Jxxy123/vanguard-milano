@@ -34,58 +34,62 @@ No human in the loop. No procurement delays. No missed backup slots.
 ## 🏗️ System Architecture
 
 ```mermaid
-flowchart TD
-    %% Colorful Professional Theme with MASSIVE Text
-    classDef default fill:#222,stroke:#555,stroke-width:2px,color:#fff,font-size:18px,font-family:sans-serif;
-    classDef browser fill:#1e1e2f,stroke:#00d2ff,stroke-width:3px,color:#fff,font-weight:bold,font-size:18px;
-    classDef streamlit fill:#0052cc,stroke:#00bfff,stroke-width:3px,color:#fff,font-size:18px,font-weight:bold;
-    classDef fastapi fill:#00875a,stroke:#36b37e,stroke-width:3px,color:#fff,font-size:18px,font-weight:bold;
-    classDef agent fill:#ff991f,stroke:#ff5630,stroke-width:4px,color:#000,font-weight:bold,font-size:20px;
-    classDef tools fill:#ffc400,stroke:#ff991f,stroke-width:3px,color:#000,font-size:16px,font-weight:bold;
-    classDef external fill:#5243aa,stroke:#8777d9,stroke-width:3px,color:#fff,font-size:18px,font-weight:bold;
+flowchart TB
+    %% --- STYLING BLOCK: Professional Colors & Massive Fonts ---
+    classDef default fill:#1E1E24,stroke:#444B5B,stroke-width:2px,color:#D1D5DB,font-size:18px,font-family:sans-serif;
+    classDef browser fill:#1e1e2f,stroke:#00d2ff,stroke-width:3px,color:#ffffff,font-weight:bold,font-size:18px;
+    classDef frontend fill:#0052cc,stroke:#00bfff,stroke-width:3px,color:#ffffff,font-weight:bold,font-size:18px;
+    classDef backend fill:#00875a,stroke:#36b37e,stroke-width:3px,color:#ffffff,font-weight:bold,font-size:18px;
+    classDef agent fill:#ff991f,stroke:#ff5630,stroke-width:3px,color:#000000,font-weight:bold,font-size:18px;
+    classDef tools fill:#ffc400,stroke:#ff991f,stroke-width:2px,color:#000000,font-weight:bold,font-size:16px;
+    classDef external fill:#5243aa,stroke:#8777d9,stroke-width:3px,color:#ffffff,font-weight:bold,font-size:18px;
+    %% ----------------------------------------------------------
 
-    subgraph BROWSER["🖥️  USER BROWSER"]
-        direction LR
-        UI_HERO["Hero Section & Language"]:::browser
-        UI_CMD["Command Panel & Uploads"]:::browser
-        UI_RESULTS["Results & X402 Settlement"]:::browser
+    subgraph BROWSER["🖥️  User Browser"]
+        UI_HERO["Hero Section\n+ Language Toggle EN ↔ IT"]:::browser
+        UI_CMD["Command Panel\n• Demo / Live Mode toggle\n• Cargo Manifest upload\n• Execute Strike Scan button"]:::browser
+        UI_RESULTS["Results Panel\n• Threat metrics\n• Agent Decision Log\n• Logistics Map (Dark / Street)\n• X402 Settlement Receipt"]:::browser
     end
 
-    subgraph DOCKER["☁️  VULTR UBUNTU VM — DOCKER CONTAINER"]
-        direction TB
-        ST["🎨 Streamlit (Port 8501)\nvanguard_ui.py Map Logic"]:::streamlit
-        
-        API["⚡ FastAPI (Port 8000)\nBackend File Handler"]:::fastapi
+    subgraph DOCKER["☁️  Vultr Ubuntu VM — Docker Container"]
 
-        subgraph AGENT["🤖  VANGUARD AGENT CORE (Gemini 2.5 Flash)"]
-            direction TB
-            STATE["VanguardState\nLogger & Trace"]:::agent
-            LOOP["Agentic Tool-Call Loop"]:::agent
-            T1["Tool 1: Live News Feeds"]:::tools
-            T2["Tool 2: Hub Capacity Check"]:::tools
-            T3["Tool 3: X402 USDC Settlement"]:::tools
+        subgraph FRONTEND["🎨  Streamlit  (Port 8501)"]
+            ST["vanguard_ui.py\nHybrid Localization Engine\nMap Style Toggle\nMultipart file handling"]:::frontend
+        end
+
+        subgraph BACKEND["⚡  FastAPI  (Port 8000)"]
+            API["POST /status\nGET  /health\nFile upload handler"]:::backend
+        end
+
+        subgraph AGENT["🤖  Vanguard Agent  (Gemini 2.5 Flash)"]
+            STATE["VanguardState\nStep logger / trace"]:::agent
+            LOOP["enable_automatic_function_calling\nAgentic tool-call loop"]:::agent
+            T1["Tool 1 — search_live_news()\nANSA RSS · BBC Europe RSS\nItalian keyword filter"]:::tools
+            T2["Tool 2 — check_hub_capacity()\nTurin · Bologna · Piacenza\nVerona · Brescia"]:::tools
+            T3["Tool 3 — execute_x402_settlement()\nDeterministic SHA-256 TX-ID\nUSDC programmable payment"]:::tools
         end
     end
 
-    subgraph EXTERNAL["🌐  EXTERNAL APIs"]
-        direction LR
-        GEMINI["Google Gemini 2.5\n(AI Studio)"]:::external
-        NEWS["ANSA & BBC\nRSS Feeds"]:::external
-        GT["Google Translator API"]:::external
+    subgraph EXTERNAL["🌐  External APIs"]
+        GEMINI["Google Gemini 2.5 Flash\nGemini API  (AI Studio)"]:::external
+        ANSA["ANSA RSS Feeds\nItalian national news"]:::external
+        BBC["BBC Europe RSS\nEnglish-language news"]:::external
+        GT["GoogleTranslator API\nEN → IT live translation"]:::external
     end
 
-    %% Connections
-    UI_CMD -->|"HTTP POST"| ST
-    ST -->|"Status Updates"| UI_RESULTS
-    ST -->|"API Request"| API
-    ST -.->|"Live Translation"| GT
-    
-    API -->|"Calls analyze_strikes()"| STATE
+    BROWSER -->|"HTTP Multipart POST\n(demo_mode + optional file)"| ST
+    ST -->|"Forwards to backend"| API
+    API -->|"Calls analyze_strikes()"| AGENT
     STATE --> LOOP
-    
-    LOOP --> T1 & T2 & T3
-    T1 -.->|"Fetch Data"| NEWS
-    LOOP <==>|"Reasoning Engine"| GEMINI
+    LOOP -->|"Tool call 1"| T1
+    LOOP -->|"Tool call 2"| T2
+    LOOP -->|"Tool call 3 — IF Critical"| T3
+    T1 -->|"Live headlines"| ANSA
+    T1 -->|"EU transport news"| BBC
+    LOOP <-->|"Reasoning engine"| GEMINI
+    API -->|"StatusResponse + AgentSteps"| ST
+    ST -->|"Renders results"| UI_RESULTS
+    ST -->|"Language toggle"| GT
 ```
 
 ### How it works — step by step
