@@ -35,49 +35,53 @@ No human in the loop. No procurement delays. No missed backup slots.
 
 ```mermaid
 flowchart TB
+    %% Minimalist Dark Mode Enterprise Theme
+    classDef default fill:#1E1E24,stroke:#444B5B,stroke-width:2px,color:#D1D5DB,font-size:15px,font-family:sans-serif;
+    classDef accent fill:#111827,stroke:#3B82F6,stroke-width:2px,color:#E0E7FF,font-weight:bold;
+
     subgraph BROWSER["🖥️  User Browser"]
-        UI_HERO["Hero Section\n+ Language Toggle EN ↔ IT"]
-        UI_CMD["Command Panel\n• Demo / Live Mode toggle\n• Cargo Manifest upload\n• Execute Strike Scan button"]
-        UI_RESULTS["Results Panel\n• Threat metrics\n• Agent Decision Log\n• Logistics Map (Dark / Street)\n• X402 Settlement Receipt"]
+        UI_HERO["Hero Section\nLanguage Toggle"]:::accent
+        UI_CMD["Command Panel\nManifest Upload & Strike Scan"]:::accent
+        UI_RESULTS["Results Panel\nAgent Log & X402 Settlement"]:::accent
     end
 
     subgraph DOCKER["☁️  Vultr Ubuntu VM — Docker Container"]
-
         subgraph FRONTEND["🎨  Streamlit  (Port 8501)"]
-            ST["vanguard_ui.py\nHybrid Localization Engine\nMap Style Toggle\nMultipart file handling"]
+            ST["vanguard_ui.py\nHybrid Map Localization"]:::accent
         end
 
         subgraph BACKEND["⚡  FastAPI  (Port 8000)"]
-            API["POST /status\nGET  /health\nFile upload handler"]
+            API["POST /status\nFile upload handler"]:::accent
         end
 
         subgraph AGENT["🤖  Vanguard Agent  (Gemini 2.5 Flash)"]
-            STATE["VanguardState\nStep logger / trace"]
-            LOOP["enable_automatic_function_calling\nAgentic tool-call loop"]
-            T1["Tool 1 — search_live_news()\nANSA RSS · BBC Europe RSS\nItalian keyword filter"]
-            T2["Tool 2 — check_hub_capacity()\nTurin · Bologna · Piacenza\nVerona · Brescia"]
-            T3["Tool 3 — execute_x402_settlement()\nDeterministic SHA-256 TX-ID\nUSDC programmable payment"]
+            STATE["VanguardState\nStep logger & trace"]:::accent
+            LOOP["enable_automatic_function_calling\nAgentic loop"]:::accent
+            T1["Tool 1: search_live_news()\nANSA & BBC Feeds"]:::default
+            T2["Tool 2: check_hub_capacity()\nNorthern Italy Hubs"]:::default
+            T3["Tool 3: execute_x402_settlement()\nUSDC smart contract"]:::default
         end
     end
 
     subgraph EXTERNAL["🌐  External APIs"]
-        GEMINI["Google Gemini 2.5 Flash\nGemini API  (AI Studio)"]
-        ANSA["ANSA RSS Feeds\nItalian national news"]
-        BBC["BBC Europe RSS\nEnglish-language news"]
-        GT["GoogleTranslator API\nEN → IT live translation"]
+        GEMINI["Google Gemini 2.5 Flash\n(AI Studio)"]:::default
+        ANSA["ANSA RSS\nItalian News"]:::default
+        BBC["BBC Europe RSS\nEnglish News"]:::default
+        GT["GoogleTranslator API\nLive translation"]:::default
     end
 
-    BROWSER -->|"HTTP Multipart POST\n(demo_mode + optional file)"| ST
+    %% Connections
+    BROWSER -->|"HTTP POST"| ST
     ST -->|"Forwards to backend"| API
-    API -->|"Calls analyze_strikes()"| AGENT
+    API -->|"Calls analyze_strikes()"| STATE
     STATE --> LOOP
     LOOP -->|"Tool call 1"| T1
     LOOP -->|"Tool call 2"| T2
-    LOOP -->|"Tool call 3 — IF Critical"| T3
+    LOOP -->|"Tool call 3 (Critical)"| T3
     T1 -->|"Live headlines"| ANSA
     T1 -->|"EU transport news"| BBC
     LOOP <-->|"Reasoning engine"| GEMINI
-    API -->|"StatusResponse + AgentSteps"| ST
+    API -->|"Status + AgentSteps"| ST
     ST -->|"Renders results"| UI_RESULTS
     ST -->|"Language toggle"| GT
 ```
