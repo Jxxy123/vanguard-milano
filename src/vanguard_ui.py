@@ -34,7 +34,7 @@ except ImportError:
     _translator_available = False
 
 _EN: dict = {
-    "tagline":        "Autonomous Logistics &amp; X402 Settlement Engine",
+    "tagline":        "Autonomous Logistics & X402 Settlement Engine",
     "system_armed":   "SYSTEM ARMED",
     "env_prod":       "ENV: PRODUCTION",
     "region":         "REGION: EU-SOUTH",
@@ -81,10 +81,16 @@ _EN: dict = {
     "err_backend":    "❌ Backend Error",
     "err_conn":       "❌ Cannot reach backend. Is FastAPI running on port 8000?",
     "err_gen":        "❌ Error:",
+    
+    # --- UI Elements & Badges ---
+    "map_dark":       " Dark Mode",
+    "map_street":     " Street View",
+    "badge_sim":      "SIMULATION",
+    "badge_live":     "ON-CHAIN",
 }
 
 _IT: dict = {
-    "tagline":        "Motore Autonomo di Logistica &amp; Pagamento X402",
+    "tagline":        "Motore Autonomo di Logistica & Pagamento X402",
     "system_armed":   "SISTEMA ARMATO",
     "env_prod":       "AMB: PRODUZIONE",
     "region":         "REGIONE: EU-SUD",
@@ -131,6 +137,12 @@ _IT: dict = {
     "err_backend":    "❌ Errore Backend",
     "err_conn":       "❌ Impossibile raggiungere il backend. FastAPI è sulla porta 8000?",
     "err_gen":        "❌ Errore:",
+    
+    # --- UI Elements & Badges ---
+    "map_dark":       " Modalità Scura",
+    "map_street":     " Vista Stradale",
+    "badge_sim":      "SIMULAZIONE",
+    "badge_live":     "ON-CHAIN",
 }
 
 @st.cache_data(show_spinner=False)
@@ -154,6 +166,48 @@ if _lang == "Italiano":
     T: dict = _IT if _demo_persisted else _live_translate()
 else:
     T = _EN
+
+def translate_backend_string(text: str, is_demo: bool) -> str:
+    if _lang != "Italiano" or not text:
+        return text
+    
+    # EXACT string matches for the Demo backend
+    demo_translations = {
+        "Critical": "Critico",
+        "Settled Instantaneously": "Regolato Istantaneamente",
+
+        "Re-route via Turin and Bologna Interportos, leveraging secured emergency slots.": "Reindirizzamento tramite gli Interporti di Torino e Bologna, sfruttando gli slot di emergenza garantiti.",
+        "Emergency slot booking due to national strike": "Prenotazione slot di emergenza a causa dello sciopero nazionale",
+        "None": "Nessuno",
+
+        "Emergency capacity secured at Turin Interporto, Bologna Interporto remains a viable alternative.": "Capacità di emergenza assicurata all'Interporto di Torino, l'Interporto di Bologna rimane una valida alternativa.",
+        "Emergency logistics capacity reservation due to national transport strike": "Prenotazione di capacità logistica di emergenza a causa dello sciopero nazionale dei trasporti",
+        "Emergency logistics capacity due to national strike": "Capacità logistica di emergenza a causa dello sciopero nazionale",
+        "Leveraging Turin Interporto and Interporto Bologna for rerouting affected freight.": "Utilizzo di Interporto Torino e Interporto Bologna per il reindirizzamento delle merci.",
+        
+        # --- CORE TERMS ---
+        "Turin Interporto": "Interporto Torino",
+        "Interporto Bologna": "Interporto Bologna",
+        "Disrupted": "Interrotto",
+        "Stable": "Stabile",
+        "Active Backup": "Backup Attivo",
+        "Warning": "Avviso",
+        "All routes clear.": "Tutte le rotte libere.",
+        "Unknown": "Sconosciuto"
+    }
+    
+    # If the text is exactly in our dictionary, translate it.
+    if is_demo:
+        return demo_translations.get(text, text)
+        
+    # Live mode fallback
+    if _translator_available:
+        try:
+            return _GT(source="auto", target="it").translate(text)
+        except Exception:
+            return demo_translations.get(text, text)
+            
+    return demo_translations.get(text, text)
 
 
 st.markdown("""
@@ -590,7 +644,7 @@ with col_results:
         m1, m2, m3 = st.columns(3)
 
         strike_level = manifest.get("strike_level", "Unknown")
-        m1.metric(T["metric_strike"], strike_level)
+        m1.metric(T["metric_strike"], translate_backend_string(strike_level, demo_mode))
         m2.metric(T["metric_routes"], len(manifest.get("affected_routes", [])))
 
         if manifest.get("strike_detected"):
@@ -636,10 +690,10 @@ with col_results:
 
         # Map Style Toggle
         _map_choice = st.radio(
-            "Map View", [" Dark Mode", " Street View"],
+            "Map View", [T["map_dark"], T["map_street"]],
             horizontal=True, label_visibility="collapsed",
         )
-        if _map_choice == " Dark Mode":
+        if _map_choice == T["map_dark"]:
             _mapbox_style = "carto-darkmatter"
             _legend_color = "#94A3B8"
             _legend_bg    = "rgba(3,7,18,0.85)"
@@ -693,7 +747,7 @@ with col_results:
                     "Info":   hub.get("capacity_status", ""),
                 })
 
-        # Fallback nodes if AI didn't populate hubs
+        # Fallback nodes
         existing_cities = {h["City"] for h in dynamic_hubs}
         if len(dynamic_hubs) == 1:
             for city, (lat, lon) in [("Turin", city_coords["Turin"]), ("Genoa", city_coords["Genoa"])]:
@@ -743,27 +797,33 @@ with col_results:
         rerouting_plan = manifest.get("rerouting_plan", "")
         if rerouting_plan and rerouting_plan not in ("", "All routes clear."):
             st.markdown(f'<p class="vg-label">{T["plan_lbl"]}</p>', unsafe_allow_html=True)
-            st.info(rerouting_plan, icon="🗺️")
+            st.info(translate_backend_string(rerouting_plan, demo_mode), icon="🗺️")
 
         # ── X402 Settlement Receipt ───────────────────────────────────
         payment = manifest.get("payment_settlement")
         if payment and isinstance(payment, dict):
             st.markdown("<br>", unsafe_allow_html=True)
             badge_html = (
-                '<span style="background:#F59E0B;color:#000;font-size:0.68rem;'
-                'font-weight:700;padding:3px 8px;border-radius:4px;'
-                'font-family:JetBrains Mono,monospace;letter-spacing:0.08em;">SIMULATION</span>'
+                f'<span style="background:#F59E0B;color:#000;font-size:0.68rem;'
+                f'font-weight:700;padding:3px 8px;border-radius:4px;'
+                f'font-family:JetBrains Mono,monospace;letter-spacing:0.08em;">{T["badge_sim"]}</span>'
                 if demo_mode else
-                '<span style="background:#10B981;color:#000;font-size:0.68rem;'
-                'font-weight:700;padding:3px 8px;border-radius:4px;'
-                'font-family:JetBrains Mono,monospace;letter-spacing:0.08em;">ON-CHAIN</span>'
+                f'<span style="background:#10B981;color:#000;font-size:0.68rem;'
+                f'font-weight:700;padding:3px 8px;border-radius:4px;'
+                f'font-family:JetBrains Mono,monospace;letter-spacing:0.08em;">{T["badge_live"]}</span>'
             )
             st.markdown(
                 f'<p class="vg-label">{T["pay_lbl"]} &nbsp; {badge_html}</p>',
                 unsafe_allow_html=True,
             )
 
-            block_ref  = payment.get("block_ref", payment.get("status", "—"))
+            # Localize database strings before building the final HTML view block
+            payment_recipient = translate_backend_string(payment.get("recipient",""), demo_mode)
+            payment_reason    = translate_backend_string(payment.get("reason",""), demo_mode)
+            payment_status    = translate_backend_string(payment.get("status",""), demo_mode)
+            block_ref_val     = payment.get("block_ref", payment.get("status", "—"))
+            block_ref         = translate_backend_string(block_ref_val, demo_mode)
+            
             st.markdown(
                 f"""
                 <div class="receipt-wrap">
@@ -775,15 +835,15 @@ with col_results:
                         </div>
                         <div style="display:flex;justify-content:space-between;">
                             <span>{T["receipt_rec"]}</span>
-                            <span class="receipt-val">{payment.get("recipient","")}</span>
+                            <span class="receipt-val">{payment_recipient}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;">
                             <span>{T["receipt_rsn"]}</span>
-                            <span class="receipt-val">{payment.get("reason","")}</span>
+                            <span class="receipt-val">{payment_reason}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;">
                             <span>{T["receipt_stat"]}</span>
-                            <span class="receipt-green">{payment.get("status","")}</span>
+                            <span class="receipt-green">{payment_status}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;">
                             <span>{T["receipt_blk"]}</span>
